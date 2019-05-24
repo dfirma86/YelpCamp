@@ -98,3 +98,5 @@ app.get('/campgrounds/:id', (req, res) => {
 })
 
 app.listen(process.env.PORT, process.env.IP, () => console.log(`YelpCamp served up...`))
+
+// test
