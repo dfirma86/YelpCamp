@@ -80,15 +80,24 @@ router.get('/:id/edit', (req, res) => {
 router.put('/:id', (req, res) => {
   // find and update the correct campground
   // redirect somewhere (usually the show page of the updated campground)
-  const data = {
-    name: req.body,
-  }
   Campground.findByIdAndUpdate(req.params.id, req.body.campground, (err, updatedCampground) => {
     if (err) {
       console.log(err)
       res.redirect('/campgrounds')
     } else {
       res.redirect('/campgrounds/' + req.params.id)
+    }
+  })
+})
+
+// DESTROY CAMPGROUND ROUTE
+router.delete('/:id', (req, res) => {
+  Campground.findByIdAndRemove(req.params.id, (err) => {
+    if (err) {
+      console.log(err)
+      res.redirect('/campgrounds')
+    } else {
+      res.redirect('/campgrounds')
     }
   })
 })
