@@ -66,18 +66,14 @@ router.get('/:id', (req, res) => {
 })
 
 // EDIT CAMPGROUND ROUTE (show form to edit...)
-router.get('/:id/edit', (req, res) => {
+router.get('/:id/edit', checkCampgroundOwnership, (req, res) => {
   Campground.findById(req.params.id, (err, foundCampground) => {
-    if (err) {
-      res.redirect('/campgrounds')
-    } else {
-      res.render('campgrounds/edit', { campground: foundCampground })
-    }
+    res.render('campgrounds/edit', { campground: foundCampground })
   })
 })
 
 // UPDATE CAMPGROUND ROUTE (edited form submitted here)
-router.put('/:id', (req, res) => {
+router.put('/:id', checkCampgroundOwnership, (req, res) => {
   // find and update the correct campground
   // redirect somewhere (usually the show page of the updated campground)
   Campground.findByIdAndUpdate(req.params.id, req.body.campground, (err, updatedCampground) => {
@@ -91,7 +87,7 @@ router.put('/:id', (req, res) => {
 })
 
 // DESTROY CAMPGROUND ROUTE
-router.delete('/:id', (req, res) => {
+router.delete('/:id', checkCampgroundOwnership, (req, res) => {
   Campground.findByIdAndRemove(req.params.id, (err) => {
     if (err) {
       console.log(err)
@@ -106,6 +102,27 @@ router.delete('/:id', (req, res) => {
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next()
   res.redirect('/login')
+}
+
+function checkCampgroundOwnership(req, res, next) {
+  if (req.isAuthenticated()) {
+    Campground.findById(req.params.id, (err, foundCampground) => {
+      if (err) {
+        console.log(err)
+        res.redirect('back')
+      } else {
+        // does user own campground?
+        if (foundCampground.author.id.equals(req.user._id)) {
+          // res.render('campgrounds/edit', { campground: foundCampground })
+          next()
+        } else {
+          res.redirect('back')
+        }
+      }
+    })
+  } else {
+    res.redirect('back')
+  }
 }
 
 module.exports = router
