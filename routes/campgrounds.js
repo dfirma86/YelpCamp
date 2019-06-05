@@ -1,6 +1,7 @@
 const express = require('express'),
   router = express.Router(),
-  Campground = require('../models/campground')
+  Campground = require('../models/campground'),
+  middleware = require('../middleware')
 
 // Index route (Shows all campgrounds)
 router.get('/', (req, res) => {
@@ -17,7 +18,7 @@ router.get('/', (req, res) => {
 })
 
 // Create route (Add new campground to DB)
-router.post('/', isLoggedIn, (req, res) => {
+router.post('/', middleware.isLoggedIn, (req, res) => {
   const { _id, username } = req.user
   const author = {
     username: username,
@@ -31,7 +32,6 @@ router.post('/', isLoggedIn, (req, res) => {
     description: description,
     author: author,
   }
-  console.log('user is... ' + req.user.username)
 
   Campground.create(newCampground, (err, newlyCreated) => {
     if (err) {
@@ -44,7 +44,7 @@ router.post('/', isLoggedIn, (req, res) => {
 })
 
 // New route (Shows form to create new campground)
-router.get('/new', isLoggedIn, (req, res) => {
+router.get('/new', middleware.isLoggedIn, (req, res) => {
   // find the campground with provided ID
   // render show template with that campground
   res.render('campgrounds/new')
@@ -57,8 +57,10 @@ router.get('/:id', (req, res) => {
   Campground.findById(id)
     .populate('comments')
     .exec((err, foundCampground) => {
-      if (err) {
+      if (err || !foundCampground) {
         console.log(err)
+        req.flash('error', 'Campground not found')
+        res.redirect('back')
       } else {
         res.render('campgrounds/show', { campground: foundCampground })
       }
@@ -66,20 +68,27 @@ router.get('/:id', (req, res) => {
 })
 
 // EDIT CAMPGROUND ROUTE (show form to edit...)
-router.get('/:id/edit', checkCampgroundOwnership, (req, res) => {
+router.get('/:id/edit', middleware.checkCampgroundOwnership, (req, res) => {
   Campground.findById(req.params.id, (err, foundCampground) => {
-    res.render('campgrounds/edit', { campground: foundCampground })
+    if (err || !foundCampground) {
+      console.log(err)
+      req.flash('error', 'Campground not found')
+      res.redirect('back')
+    } else {
+      res.render('campgrounds/edit', { campground: foundCampground })
+    }
   })
 })
 
 // UPDATE CAMPGROUND ROUTE (edited form submitted here)
-router.put('/:id', checkCampgroundOwnership, (req, res) => {
+router.put('/:id', middleware.checkCampgroundOwnership, (req, res) => {
   // find and update the correct campground
   // redirect somewhere (usually the show page of the updated campground)
   Campground.findByIdAndUpdate(req.params.id, req.body.campground, (err, updatedCampground) => {
-    if (err) {
+    if (err || !updatedCampground) {
       console.log(err)
-      res.redirect('/campgrounds')
+      req.flash('error', 'Campground not found')
+      res.redirect('back')
     } else {
       res.redirect('/campgrounds/' + req.params.id)
     }
@@ -87,42 +96,16 @@ router.put('/:id', checkCampgroundOwnership, (req, res) => {
 })
 
 // DESTROY CAMPGROUND ROUTE
-router.delete('/:id', checkCampgroundOwnership, (req, res) => {
+router.delete('/:id', middleware.checkCampgroundOwnership, (req, res) => {
   Campground.findByIdAndRemove(req.params.id, (err) => {
     if (err) {
       console.log(err)
-      res.redirect('/campgrounds')
+      req.flash('error', err.message)
+      res.redirect('back')
     } else {
       res.redirect('/campgrounds')
     }
   })
 })
-
-// Middleware
-function isLoggedIn(req, res, next) {
-  if (req.isAuthenticated()) return next()
-  res.redirect('/login')
-}
-
-function checkCampgroundOwnership(req, res, next) {
-  if (req.isAuthenticated()) {
-    Campground.findById(req.params.id, (err, foundCampground) => {
-      if (err) {
-        console.log(err)
-        res.redirect('back')
-      } else {
-        // does user own campground?
-        if (foundCampground.author.id.equals(req.user._id)) {
-          // res.render('campgrounds/edit', { campground: foundCampground })
-          next()
-        } else {
-          res.redirect('back')
-        }
-      }
-    })
-  } else {
-    res.redirect('back')
-  }
-}
 
 module.exports = router

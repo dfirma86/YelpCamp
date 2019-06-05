@@ -5,7 +5,7 @@ const express = require('express'),
 
 // Root route
 router.get('/', (req, res) => {
-  res.send('This is the landing page')
+  res.render('landing')
 })
 
 // Show registration form
@@ -19,10 +19,11 @@ router.post('/register', (req, res) => {
   const newUser = new User({ username: username })
   User.register(newUser, password, (err, user) => {
     if (err) {
-      console.log(err)
-      return res.render('register')
+      req.flash('error', err.message)
+      return res.redirect('register')
     }
     passport.authenticate('local')(req, res, () => {
+      req.flash('success', `Welcome to YelpCamp ${username}`)
       res.redirect('/campgrounds')
     })
   })
@@ -46,13 +47,8 @@ router.post(
 // Logout route
 router.get('/logout', (req, res) => {
   req.logout()
+  req.flash('success', 'Logged you out!')
   res.redirect('/campgrounds')
 })
-
-// Middleware
-function isLoggedIn(req, res, next) {
-  if (req.isAuthenticated()) return next()
-  res.redirect('/login')
-}
 
 module.exports = router
