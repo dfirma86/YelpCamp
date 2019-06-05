@@ -25,9 +25,10 @@ router.post('/', middleware.isLoggedIn, (req, res) => {
     id: _id,
   }
 
-  const { name, image, description } = req.body
+  const { name, price, image, description } = req.body
   const newCampground = {
     name: name,
+    price: price,
     image: image,
     description: description,
     author: author,
